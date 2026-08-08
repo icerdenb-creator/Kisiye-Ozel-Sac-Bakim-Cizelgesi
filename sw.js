@@ -1,4 +1,4 @@
-const CACHE = "sac-bakim-pwa-v2";
+const CACHE = "sac-bakim-pwa-v3";
 
 const ASSETS = [
   "./",
@@ -10,6 +10,7 @@ self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(ASSETS))
   );
+
   self.skipWaiting();
 });
 
@@ -28,14 +29,29 @@ self.addEventListener("activate", event => {
 });
 
 self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
+
+  if (event.request.method !== "GET") {
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then(cached => {
-      if (cached) return cached;
+
+      if (cached) {
+        return cached;
+      }
 
       return fetch(event.request)
         .then(response => {
+
+          if (
+            !response ||
+            response.status !== 200 ||
+            response.type !== "basic"
+          ) {
+            return response;
+          }
+
           const copy = response.clone();
 
           caches.open(CACHE).then(cache => {
@@ -43,8 +59,13 @@ self.addEventListener("fetch", event => {
           });
 
           return response;
+
         })
-        .catch(() => caches.match("./index.html"));
+        .catch(() => {
+          return caches.match("./index.html");
+        });
+
     })
   );
+
 });
