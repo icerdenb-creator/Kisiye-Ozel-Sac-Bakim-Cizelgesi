@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saç Bakım Çizelgesi</title>
+<style>
+  :root {
+    --bg:#f5f7fb; --card:#fff; --text:#172033; --muted:#6b7280;
+    --line:#e5e7eb; --green:#16a34a; --green2:#dcfce7; --blue:#2563eb;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+          background:var(--bg); color:var(--text); }
+  .wrap { max-width:760px; margin:auto; padding:18px 14px 40px; }
+  .hero { background:var(--card); border-radius:18px; padding:20px; box-shadow:0 3px 14px #0000000d; margin-bottom:14px; }
+  h1 { margin:0 0 7px; font-size:24px; }
+  .sub { color:var(--muted); line-height:1.45; }
+  .progress { margin-top:14px; height:12px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+  .bar { height:100%; width:0%; background:var(--green); transition:.2s; }
+  .count { margin-top:8px; font-weight:700; }
+  .month { margin:18px 2px 8px; font-weight:800; font-size:18px; }
+  .item { display:grid; grid-template-columns:1.25fr 1.45fr auto; gap:10px; align-items:center;
+           background:var(--card); border:1px solid var(--line); border-radius:14px;
+           padding:12px; margin:8px 0; }
+  .date .day { display:block; font-weight:800; }
+  .weekday { color:var(--muted); font-size:13px; }
+  .kind { font-size:14px; font-weight:700; }
+  .capsule { color:#7c3aed; }
+  .shampoo { color:#2563eb; }
+  .measurement { color:#6b7280; }
+  .done { border:0; border-radius:10px; padding:10px 12px; background:#eef2ff;
+           color:#1d4ed8; font-weight:800; cursor:pointer; }
+  .done.doneState { background:var(--green2); color:#166534; }
+  .item.locked { opacity:.48; }
+  .item.locked .done { cursor:not-allowed; background:#f3f4f6; color:#9ca3af; }
+  .item.locked .lengthInput { background:#f3f4f6; color:#9ca3af; cursor:not-allowed; }
+  .item.completed { opacity:.72; }
+  .item.completed .done::before { content:"✓ "; }
+
+
+  .installBox { display:none; margin:14px 0; padding:14px; background:#eef2ff;
+                border:1px solid #c7d2fe; border-radius:14px; }
+  .installBox.show { display:block; }
+  .installBtn { border:0; border-radius:10px; padding:10px 13px; background:#2563eb;
+                color:#fff; font-weight:800; cursor:pointer; margin-top:8px; }
+  .dailyBox { background:var(--card); border:1px solid var(--line); border-radius:16px;
+              padding:15px; margin:14px 0; }
+  .dailyTitle { font-size:18px; font-weight:800; margin-bottom:4px; }
+  .dailySub { color:var(--muted); font-size:13px; line-height:1.4; margin-bottom:11px; }
+  .dailyForm { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; }
+  .dailyForm input { padding:10px 11px; border:1px solid var(--line); border-radius:10px;
+                     font-size:14px; min-width:0; }
+  #saveDaily { border:0; border-radius:10px; padding:10px 13px; background:var(--green);
+               color:#fff; font-weight:800; cursor:pointer; }
+  .dailyResult { margin-top:10px; font-weight:800; }
+  .dailyHistory { margin-top:10px; }
+  .historyRow { display:flex; justify-content:space-between; align-items:center;
+                gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:13px; }
+  .historyDiff { font-weight:800; }
+  .historyDiff.plus { color:#15803d; }
+  .historyDiff.minus { color:#b91c1c; }
+  .historyDiff.same { color:var(--muted); }
+  .historyDelete { border:0; background:transparent; color:#b91c1c; cursor:pointer; font-weight:700; }
+
+  .backupBox { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .backupBtn { border:1px solid var(--line); background:#fff; color:#374151; border-radius:10px;
+               padding:9px 11px; font-weight:700; cursor:pointer; }
+  .backupBtn.primary { background:#eef2ff; color:#1d4ed8; border-color:#c7d2fe; }
+  #restoreFile { display:none; }
+  .startBox { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:15px; }
+  .startBox label { width:100%; }
+  #startDate { padding:10px 11px; border:1px solid var(--line); border-radius:10px; font-size:15px; }
+  #applyStart { border:0; border-radius:10px; padding:10px 14px; background:var(--blue); color:#fff; font-weight:800; cursor:pointer; }
+  .reset { margin-top:14px; border:1px solid var(--line); background:#fff; color:#374151;
+            border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer; }
+
+  @media (max-width:700px) {
+    .dailyForm { grid-template-columns:1fr 1fr; }
+    #saveDaily { grid-column:1 / -1; }
+  }
+  @media (max-width:560px) {
+    .item { grid-template-columns:1fr auto; }
+    .kind { grid-column:1; }
+    .done { grid-column:2; grid-row:1 / span 2; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="installBox" id="installBox">
+  <b>📱 Ana ekrana ekle</b>
+  <div style="margin-top:5px;font-size:13px;line-height:1.45">
+    Bu çizelgeyi telefonunda uygulama gibi kullanmak için aşağıdaki düğmeye dokun.
+    Android'de doğrudan kurulum açılır; iPhone'da Safari menüsünden <b>Paylaş → Ana Ekrana Ekle</b> seçilir.
+  </div>
+  <button class="installBtn" id="installBtn" type="button">Ana Ekrana Ekle</button>
+</div>
+
+  <div class="hero">
+    <h1>🧴 3 Aylık Saç Bakım Çizelgesi</h1>
+    <div class="sub">Başlangıç tarihini seç. Çizelge, 30 kapsülü 3 aylık döneme göre otomatik olarak yeniden oluşturur.
+    Her kullanımın yanında <b>Yapıldı</b>'ya dokun. Her gün saç uzunluğunu cm olarak girebilirsin; kapsül ve şampuan günleri ayrıca belirtilir.</div>
+    <div class="startBox">
+      <label for="startDate"><b>Başlangıç tarihi</b></label>
+      <input id="startDate" type="date">
+      <button id="applyStart" type="button">Tarihi uygula</button>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="count" id="count">0 / 55 kullanım tamamlandı</div>
+    <button class="reset" id="reset">Tüm işaretleri sıfırla</button>
+    <div class="backupBox">
+      <button class="backupBtn primary" id="backupBtn" type="button">💾 Yedeği Kaydet</button>
+      <button class="backupBtn" id="restoreBtn" type="button">📂 Yedeği Yükle</button>
+      <input id="restoreFile" type="file" accept=".json,application/json">
+    </div>
+
+  </div>
+  
+<div class="dailyBox">
+  <div class="dailyTitle">📏 Günlük Saç Uzunluğu</div>
+  <div class="dailySub">Her gün ölçümünü gir. İstersen sadece ölçüm yapıp kullanım gününü ayrıca işaretleyebilirsin.</div>
+  <div class="dailyForm">
+    <input id="dailyDate" type="date">
+    <input id="dailyLength" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Saç uzunluğu (cm)">
+    <button id="saveDaily" type="button">Ölçümü Kaydet</button>
+  </div>
+  <div id="dailyResult" class="dailyResult"></div>
+  <div id="dailyHistory"></div>
+</div>
+<div id="list"></div>
+<script>
+
+const STORAGE = "sac_bakim_cizelgesi_dynamic_v1";
+const weekdays = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
+const monthNames = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"];
+
+function defaultState() {
+  return { startDate: "2026-08-10", done: {}, lengths: {}, dailyMeasurements: {} };
+}
+function getState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE) || "null");
+    if (!saved || !saved.startDate) return defaultState();
+    if (!saved.dailyMeasurements) saved.dailyMeasurements = {};
+    return saved;
+  } catch(e) { return defaultState(); }
+}
+function saveState(state) { localStorage.setItem(STORAGE, JSON.stringify(state)); }
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function iso(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function fmt(d) { return `${d.getDate()} ${monthNames[d.getMonth()].charAt(0)+monthNames[d.getMonth()].slice(1).toLocaleLowerCase("tr-TR")}`; }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+function buildSchedule(startStr) {
+  const start = new Date(startStr + "T12:00:00");
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 3);
+  end.setDate(end.getDate() - 1);
+
+  // 30 capsule dates distributed across the 3-month period.
+  const span = Math.max(1, Math.round((end - start) / 86400000));
+  const capsules = [];
+  for (let i = 0; i < 30; i++) {
+    const offset = Math.round(i * (span / 29));
+    capsules.push(addDays(start, offset));
+  }
+
+  const capsuleSet = new Set(capsules.map(d => iso(d)));
+
+  // One shampoo-only day between capsule days where there is room.
+  const shampooSet = new Set();
+  for (let i = 0; i < capsules.length - 1; i++) {
+    const a = capsules[i], b = capsules[i + 1];
+    const gap = Math.round((b - a) / 86400000);
+    if (gap > 1) {
+      shampooSet.add(iso(addDays(a, Math.max(1, Math.floor(gap / 2)))));
+    }
+  }
+
+  // Every calendar day gets a row so hair length can be entered daily.
+  const events = [];
+  for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+    const key = iso(d);
+    let kind = "Ölçüm Günü";
+    let capsule = false;
+    if (capsuleSet.has(key)) {
+      kind = "Kapsül + Şampuan";
+      capsule = true;
+    } else if (shampooSet.has(key)) {
+      kind = "Sadece Şampuan";
+    }
+    events.push({date: new Date(d), kind, capsule});
+  }
+  return {events, start, end};
+}
+
+function formatCm(value) {
+  return Number(value).toLocaleString("tr-TR", {minimumFractionDigits:0, maximumFractionDigits:1});
+}
+
+
+function localDateToday() {
+  const d = new Date();
+  return iso(d);
+}
+
+function renderDailyHistory() {
+  const state = getState();
+  const box = document.getElementById("dailyHistory");
+  const result = document.getElementById("dailyResult");
+  const entries = Object.entries(state.dailyMeasurements)
+    .sort((a,b) => a[0].localeCompare(b[0]));
+
+  if (!entries.length) {
+    box.innerHTML = "";
+    result.textContent = "";
+    return;
+  }
+
+  const baseline = Number(entries[0][1]);
+  const latest = Number(entries[entries.length - 1][1]);
+  const total = latest - baseline;
+  const sign = total > 0 ? "+" : "";
+  result.textContent = `İlk ölçüme göre toplam değişim: ${sign}${formatCm(total)} cm`;
+  result.className = "dailyResult " + (total > 0 ? "plus" : total < 0 ? "minus" : "same");
+
+  box.innerHTML = entries.map(([dateKey, value]) => {
+    const d = new Date(dateKey + "T12:00:00");
+    const delta = Number(value) - baseline;
+    const ds = delta > 0 ? "+" : "";
+    const cls = delta > 0 ? "plus" : delta < 0 ? "minus" : "same";
+    return `<div class="historyRow">
+      <span><b>${d.getDate()} ${monthNames[d.getMonth()].toLocaleLowerCase("tr-TR")}</b> — ${formatCm(value)} cm</span>
+      <span class="historyDiff ${cls}">${dateKey === entries[0][0] ? "Başlangıç" : ds + formatCm(delta) + " cm"}</span>
+      <button class="historyDelete" data-date="${dateKey}" type="button">Sil</button>
+    </div>`;
+  }).join("");
+
+  box.querySelectorAll(".historyDelete").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const s = getState();
+      delete s.dailyMeasurements[btn.dataset.date];
+      saveState(s);
+      renderDailyHistory();
+    });
+  });
+}
+
+document.getElementById("dailyDate").value = localDateToday();
+
+document.getElementById("saveDaily").addEventListener("click", () => {
+  const dateInput = document.getElementById("dailyDate");
+  const lengthInput = document.getElementById("dailyLength");
+  const value = parseFloat(lengthInput.value);
+
+  if (!dateInput.value || !Number.isFinite(value) || value < 0) {
+    alert("Lütfen tarih ve geçerli bir saç uzunluğu gir.");
+    return;
+  }
+
+  const state = getState();
+  state.dailyMeasurements[dateInput.value] = value;
+  saveState(state);
+  lengthInput.value = "";
+  renderDailyHistory();
+});
+
+function renderSchedule() {
+  const state = getState();
+  const {events, start, end} = buildSchedule(state.startDate);
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  let month = -1;
+
+  events.forEach((ev, idx) => {
+    if (ev.date.getMonth() !== month) {
+      month = ev.date.getMonth();
+      const heading = document.createElement("div");
+      heading.className = "month";
+      heading.textContent = monthNames[month];
+      list.appendChild(heading);
+    }
+
+    const key = `${iso(ev.date)}_${idx}`;
+    const item = document.createElement("div");
+    item.className = "item";
+    item.dataset.key = key;
+    item.innerHTML = `
+      <div class="date">
+        <span class="day">${ev.date.getDate()} ${monthNames[ev.date.getMonth()].charAt(0)+monthNames[ev.date.getMonth()].slice(1).toLocaleLowerCase("tr-TR")}</span>
+        <span class="weekday">${weekdays[ev.date.getDay() === 0 ? 6 : ev.date.getDay()-1]}</span>
+      </div>
+      <div class="kind ${ev.capsule ? "capsule" : (ev.kind === "Sadece Şampuan" ? "shampoo" : "measurement")}">
+        ${ev.kind}
+        <div class="measure">
+          <input class="lengthInput" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Saç cm">
+          <span>cm</span>
+        </div>
+        <div class="diff"></div>
+      </div>
+      <button class="done" type="button" aria-pressed="false">Yapıldı</button>
+    `;
+    list.appendChild(item);
+
+    const input = item.querySelector(".lengthInput");
+    const btn = item.querySelector(".done");
+    if (state.lengths[key] !== undefined) input.value = state.lengths[key];
+    if (state.done[key]) mark(item, true);
+
+    btn.addEventListener("click", () => {
+      const s = getState();
+      if (btn.disabled) return;
+      if (s.done[key]) delete s.done[key]; else s.done[key] = true;
+      saveState(s);
+      mark(item, !!s.done[key]);
+      updateAll();
+    });
+
+    input.addEventListener("input", () => {
+      const s = getState();
+      if (input.disabled) return;
+      if (input.value.trim() === "") delete s.lengths[key];
+      else s.lengths[key] = input.value;
+      saveState(s);
+      updateDifferences(s);
+      updateAll();
+    });
+  });
+
+  document.getElementById("startDate").value = state.startDate;
+  updateAll();
+  renderDailyHistory();
+}
+
+function mark(item, stateValue) {
+  item.classList.toggle("completed", stateValue);
+  const btn = item.querySelector(".done");
+  btn.classList.toggle("doneState", stateValue);
+  btn.setAttribute("aria-pressed", stateValue ? "true" : "false");
+}
+
+function updateDifferences(state) {
+  const items = [...document.querySelectorAll(".item")];
+  const measurements = items.map(item => ({
+    key: item.dataset.key,
+    value: parseFloat(item.querySelector(".lengthInput").value)
+  })).filter(x => Number.isFinite(x.value));
+
+  const baseline = measurements.length ? measurements[0].value : null;
+  const baselineKey = measurements.length ? measurements[0].key : null;
+
+  items.forEach(item => {
+    const value = parseFloat(item.querySelector(".lengthInput").value);
+    const diff = item.querySelector(".diff");
+    if (!Number.isFinite(value) || baseline === null) {
+      diff.textContent = ""; diff.className = "diff"; return;
+    }
+    if (item.dataset.key === baselineKey) {
+      diff.textContent = "Başlangıç ölçümü"; diff.className = "diff same"; return;
+    }
+    const delta = value - baseline;
+    const sign = delta > 0 ? "+" : "";
+    diff.textContent = `İlk ölçüme göre ${sign}${formatCm(delta)} cm`;
+    diff.className = "diff " + (delta > 0 ? "plus" : delta < 0 ? "minus" : "same");
+  });
+}
+
+function updateLocks(state) {
+  const items = [...document.querySelectorAll(".item")];
+  let previousCompleted = true;
+
+  items.forEach((item, index) => {
+    const key = item.dataset.key;
+    const completed = !!state.done[key] || (state.lengths[key] !== undefined && state.lengths[key] !== "");
+    const locked = index > 0 && !previousCompleted;
+
+    item.classList.toggle("locked", locked);
+    item.querySelector(".done").disabled = locked;
+    item.querySelector(".lengthInput").disabled = locked;
+
+    previousCompleted = completed;
+  });
+}
+
+function updateAll() {
+  const state = getState();
+  const items = [...document.querySelectorAll(".item")];
+  const done = items.filter(i => state.done[i.dataset.key] || (state.lengths[i.dataset.key] !== undefined && state.lengths[i.dataset.key] !== "")).length;
+  document.getElementById("count").textContent = `${done} / ${items.length} gün tamamlandı`;
+  document.getElementById("bar").style.width = `${items.length ? Math.round(done/items.length*100) : 0}%`;
+  updateDifferences(state);
+  updateLocks(state);
+}
+
+document.getElementById("applyStart").addEventListener("click", () => {
+  const input = document.getElementById("startDate");
+  if (!input.value) return;
+  const state = getState();
+  state.startDate = input.value;
+  state.done = {};
+  state.lengths = {};
+  saveState(state);
+  renderSchedule();
+});
+
+renderSchedule();
+
+
+document.getElementById("backupBtn").addEventListener("click", () => {
+  const state = getState();
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sac-bakim-yedek-${state.startDate}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("restoreBtn").addEventListener("click", () => {
+  document.getElementById("restoreFile").click();
+});
+
+document.getElementById("restoreFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const imported = JSON.parse(text);
+    if (!imported.startDate || typeof imported !== "object") throw new Error();
+    if (!imported.done) imported.done = {};
+    if (!imported.lengths) imported.lengths = {};
+    if (!imported.dailyMeasurements) imported.dailyMeasurements = {};
+    localStorage.setItem(STORAGE, JSON.stringify(imported));
+    renderSchedule();
+    alert("Yedek başarıyla yüklendi.");
+  } catch {
+    alert("Bu dosya geçerli bir çizelge yedeği değil.");
+  }
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (confirm("Bu başlangıç tarihindeki tüm işaret ve ölçümler silinsin mi?")) {
+    const state = getState();
+    state.done = {};
+    state.lengths = {};
+    state.dailyMeasurements = {};
+    saveState(state);
+    renderSchedule();
+  }
+});
+
+load();
+
+let deferredInstallPrompt = null;
+const installBox = document.getElementById("installBox");
+const installBtn = document.getElementById("installBtn");
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBox.classList.add("show");
+});
+
+installBtn.addEventListener("click", async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBox.classList.remove("show");
+  } else {
+    alert("Bu tarayıcı otomatik kurulum penceresini desteklemiyor.\n\nAndroid: Chrome menüsü → 'Uygulamayı yükle' veya 'Ana ekrana ekle'.\n\niPhone/iPad: Safari → Paylaş → Ana Ekrana Ekle.");
+  }
+});
+
+window.addEventListener("appinstalled", () => {
+  installBox.classList.remove("show");
+  deferredInstallPrompt = null;
+});
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+
+</script>
+</body>
+</html>
