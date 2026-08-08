@@ -1,0 +1,10 @@
+{
+  "name": "Saç Bakım Çizelgesi",
+  "short_name": "Saç Çizelgesi",
+  "start_url": "./sac_bakim_cizelgesi.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2563eb",
+  "description": "3 aylık, 30 kapsüllük saç bakım ve günlük ölçüm çizelgesi.",
+  "icons": []
+}
